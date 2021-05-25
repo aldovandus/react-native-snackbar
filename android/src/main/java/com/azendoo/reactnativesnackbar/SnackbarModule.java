@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Collections;
 
 public class SnackbarModule extends ReactContextBaseJavaModule {
 
@@ -49,7 +48,7 @@ public class SnackbarModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void show(ReadableMap options, final Callback callback) {
+    public void show(ReadableMap options, final Callback callback, final Callback onDismissCallback) {
         ViewGroup view;
 
         try {
@@ -69,19 +68,16 @@ public class SnackbarModule extends ReactContextBaseJavaModule {
             // Get all modal views on the screen.
             ArrayList<View> modals = recursiveLoopChildren(view, new ArrayList<View>());
 
-            // Reverse array in order to get first the last modal rendered.
-            Collections.reverse(modals);
-
             for (View modal : modals) {
                 if (modal == null) continue;
 
-                displaySnackbar(modal, options, callback);
+                displaySnackbar(modal, options, callback, onDismissCallback);
                 return;
             }
 
             // No valid modals.
             if (view.getVisibility() == View.VISIBLE) {
-                displaySnackbar(view, options, callback);
+                displaySnackbar(view, options, callback, onDismissCallback);
             } else {
                 Log.w(REACT_NAME, "Content view is not in focus or not visible");
             }
@@ -89,7 +85,7 @@ public class SnackbarModule extends ReactContextBaseJavaModule {
             return;
         }
 
-        displaySnackbar(view, options, callback);
+        displaySnackbar(view, options, callback, onDismissCallback);
     }
 
     @ReactMethod
@@ -103,7 +99,7 @@ public class SnackbarModule extends ReactContextBaseJavaModule {
         mActiveSnackbars.clear();
     }
 
-    private void displaySnackbar(View view, ReadableMap options, final Callback callback) {
+    private void displaySnackbar(View view, ReadableMap options, final Callback callback, final Callback onDismissCallback) {
         String text = getOptionValue(options, "text", "");
         int duration = getOptionValue(options, "duration", Snackbar.LENGTH_SHORT);
         int numberOfLines = getOptionValue(options, "numberOfLines", 2);
@@ -120,9 +116,20 @@ public class SnackbarModule extends ReactContextBaseJavaModule {
             }
         }
 
-        Snackbar snackbar;
+        final Snackbar.Callback dismissCallback = new Snackbar.Callback() {
+
+            @Override
+            public void onDismissed(Snackbar snackbar, int event) {
+              onDismissCallback.invoke();
+            }
+        
+          };
+
+        final Snackbar snackbar;
         try {
+           
             snackbar = Snackbar.make(view, text, duration);
+            snackbar.addCallback(dismissCallback);
         } catch (IllegalArgumentException e) {
             // TODO: Fix root cause of "No suitable parent found from the given view. Please provide a valid view."
             e.printStackTrace();
@@ -163,6 +170,7 @@ public class SnackbarModule extends ReactContextBaseJavaModule {
                     if (callbackWasCalled) return;
                     callbackWasCalled = true;
 
+                    snackbar.removeCallback(dismissCallback);
                     callback.invoke();
                 }
             };

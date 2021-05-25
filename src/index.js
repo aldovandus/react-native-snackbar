@@ -21,6 +21,8 @@ type Action = {
    * Function called when the user taps the button.
    */
   onPress?: () => void,
+
+  onDismiss?: () => void
 };
 
 /**
@@ -127,6 +129,9 @@ const SnackBar: ISnackBar = {
     delete action.color;
     const actionTextColor = actionTextColorRaw && processColor(actionTextColorRaw);
     const onPressCallback = action.onPress || (() => {});
+    const onDismissCallback = action.onDismiss || (() => {});
+
+    console.log('shoooooooow')
 
     const nativeOptions = {
       ...options,
@@ -141,7 +146,7 @@ const SnackBar: ISnackBar = {
       } : undefined,
     };
 
-    NativeModules.RNSnackbar.show(nativeOptions, onPressCallback);
+    NativeModules.RNSnackbar.show(nativeOptions, onPressCallback, onDismissCallback);
   },
 
   dismiss() {
